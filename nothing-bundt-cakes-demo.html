@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Nothing Bundt Cakes — ShopFlow AI Demo</title>
+<style>
+  body {
+    margin:0; font-family:system-ui,sans-serif;
+    background: linear-gradient(135deg,#fdf6f0 0%,#fde8e0 50%,#fdf0f5 100%);
+    min-height:100vh; display:flex; flex-direction:column;
+    align-items:center; justify-content:flex-start; padding:40px 20px 120px;
+  }
+  .demo-banner {
+    background:linear-gradient(135deg,#d4645a,#b5443b);
+    color:#fff; padding:10px 24px; border-radius:30px;
+    font-size:13px; font-weight:600; letter-spacing:.05em; margin-bottom:32px;
+    box-shadow:0 4px 16px rgba(212,100,90,.4);
+  }
+  .demo-hero { text-align:center; max-width:540px; }
+  .demo-hero h1 { font-size:2.2rem; color:#603913; margin:0 0 12px; font-weight:800; }
+  .demo-hero p  { color:#7a4a30; font-size:1rem; line-height:1.6; margin:0 0 24px; }
+  .demo-hero .cta-hint {
+    background:rgba(212,100,90,.1); border:1px solid rgba(212,100,90,.3);
+    border-radius:12px; padding:12px 20px; font-size:13px; color:#b5443b;
+    font-weight:600; display:inline-block;
+  }
+  .demo-logo {
+    font-size:3rem; margin-bottom:8px;
+  }
+  .demo-tag { font-size:12px; color:#a06040; letter-spacing:.12em; font-weight:600; text-transform:uppercase; margin-bottom:20px; }
+  .shopflow-badge {
+    position:fixed; bottom:80px; left:50%; transform:translateX(-50%);
+    background:rgba(255,255,255,.9); border:1px solid rgba(212,100,90,.3);
+    border-radius:20px; padding:6px 18px; font-size:11px; color:#7a4a30;
+    font-weight:600; white-space:nowrap; box-shadow:0 4px 12px rgba(0,0,0,.1);
+    backdrop-filter:blur(10px); pointer-events:none;
+    z-index:9997;
+  }
+</style>
+</head>
+<body>
+
+<div class="demo-banner">✦ SHOPFLOW AI — INTERACTIVE DEMO</div>
+
+<div class="demo-logo">🎂</div>
+<div class="demo-tag">Nothing Bundt Cakes</div>
+
+<div class="demo-hero">
+  <h1>Find Your Perfect Cake</h1>
+  <p>
+    This is a live ShopFlow AI demo built for Nothing Bundt Cakes.
+    Click the pink button in the bottom-right corner to chat with Bella —
+    your personal cake advisor.
+  </p>
+  <div class="cta-hint">
+    👇 Click the pink button to get started →
+  </div>
+</div>
+
+<div class="shopflow-badge">Powered by ShopFlow AI ✦</div>
+
+<!-- ============================================================
+  NOTHING BUNDT CAKES — ShopFlow AI Demo Bot
+  Demo built by ShopFlow | shopflowai.com
+
+  NOTE: This is a standalone demo file — not connected to a Shopify store.
+  Products are hardcoded below. Add to Cart simulates the Shopify experience.
+  To go live on a real Shopify store, deploy with bot-template.html + Railway proxy.
+============================================================ -->
+
+<script>
+const CLIENT = {
+
+  // ── Bot Identity ──────────────────────────────────────────────────────────
+  botName:    'Bella',
+  tagline:    'Cake Advisor',
+  poweredBy:  'ShopFlow AI ✦',
+  welcomeMsg: 'Hey there! 🎂 I\'m Bella — let\'s find the perfect cake for you!',
+
+  // ── Brand Colors ──────────────────────────────────────────────────────────
+  colors: {
+    primary:     '#d4645a',   // NBC warm red
+    primaryDark: '#b5443b',   // darker red
+    bg:          '#1a0805',   // deep warm dark
+    surface:     '#2d1410',   // card surface
+    border:      '#4a2018',   // border
+    text:        '#fff5f0',   // main text
+    textMuted:   '#c4967e',   // muted text
+  },
+
+  // ── Shop URL (links to NBC website) ──────────────────────────────────────
+  shopUrl:    'https://www.nothingbundtcakes.com',
+  proxyUrl:   'https://shopflow-demo-proxy-production.up.railway.app/api/chat',  // ← update after deploying demo-proxy-server.js
+  model:      'claude-haiku-4-5-20251001',
+  maxTokens:  600,
+
+  // ── Demo mode: true = simulate Add to Cart (no real Shopify store) ────────
+  demoMode: true,
+
+  // ── AI Personality ────────────────────────────────────────────────────────
+  aiPersonality: `You are Bella, a warm and enthusiastic cake advisor for Nothing Bundt Cakes — America's beloved bakery famous for their signature Bundt cakes with cream cheese frosting.
+
+Nothing Bundt Cakes offers: Bundtinis (bite-sized, 12-count), Bundtlets (individual, personal-sized), 8" Bundt Cakes (serves 8-10), and 10" Bundt Cakes (serves 12-16). Tiered cakes are also available for weddings.
+
+Be warm, celebratory, and knowledgeable. Help customers find the perfect cake for their occasion, group size, and flavor preferences. Always mention sizes and servings when recommending. Use bakery language naturally (e.g., "our signature cream cheese frosting", "moist and delicious").`,
+
+  // ── Quiz Questions ────────────────────────────────────────────────────────
+  quiz: [
+    {
+      question: '🎉 What\'s the occasion?',
+      chips: [
+        { label: '🎂 Birthday',           tags: ['birthday', 'celebration', 'gift'] },
+        { label: '🎉 Party or Event',     tags: ['party', 'group', 'celebration'] },
+        { label: '💝 Gift for Someone',   tags: ['gift', 'individual', 'classic'] },
+        { label: '🍴 Treating Myself',    tags: ['individual', 'personal', 'small'] },
+        { label: '💒 Wedding / Special',  tags: ['wedding', 'luxury', 'premium', 'large-party'] },
+      ]
+    },
+    {
+      question: '👥 How many people are you serving?',
+      chips: [
+        { label: 'Just Me',           tags: ['individual', 'small', 'personal'] },
+        { label: '2–6 People',        tags: ['small', 'personal'] },
+        { label: '8–15 People',       tags: ['party', 'medium', 'birthday'] },
+        { label: '20+ People',        tags: ['large-party', 'group', 'party'] },
+      ]
+    },
+    {
+      question: '😋 What flavor are you in the mood for?',
+      chips: [
+        { label: '❤️ Red Velvet',                  tags: ['classic', 'red-velvet'] },
+        { label: '🍫 Chocolate',                    tags: ['chocolate'] },
+        { label: '🍋 Lemon',                        tags: ['fruity', 'light', 'lemon'] },
+        { label: '🫐 Fruity & Bright',              tags: ['fruity', 'light'] },
+        { label: '🎊 Festive / Confetti',           tags: ['birthday', 'fun', 'confetti'] },
+        { label: '🤷 Surprise me!',                 tags: ['classic'] },
+      ]
+    },
+    {
+      question: '💰 What\'s your budget?',
+      chips: [
+        { label: 'Under $15',    tags: ['small', 'budget', 'individual'] },
+        { label: '$15 – $45',    tags: ['medium', 'mid', 'birthday'] },
+        { label: '$45 – $70',    tags: ['premium', 'large-party'] },
+        { label: '$70+',         tags: ['luxury', 'wedding', 'large-party'] },
+      ]
+    },
+    {
+      question: '🎀 Any special preferences?',
+      chips: [
+        { label: 'No preference',              tags: [] },
+        { label: 'Perfect for gifting',        tags: ['gift', 'premium'] },
+        { label: 'Great for kids / families',  tags: ['birthday', 'fun', 'confetti'] },
+        { label: 'Something impressive',       tags: ['premium', 'luxury'] },
+      ]
+    },
+  ],
+
+  // ── Products (hardcoded for demo — NBC isn't Shopify) ─────────────────────
+  products: [
+    {
+      name:        'Red Velvet Bundtlet',
+      handle:      'red-velvet-individual-bundtlet',
+      price:       '$6.50',
+      tags:        ['individual', 'small', 'personal', 'classic', 'red-velvet', 'gift', 'birthday'],
+      blurb:       'Our most iconic flavor — rich red velvet cake with signature cream cheese frosting.',
+      isBestseller: true,
+      rating:      4.9,
+      reviewCount: 2847,
+      _img:        'https://images.unsplash.com/photo-1565958011703-44f9829ba187?w=320&auto=format&fit=crop',
+    },
+    {
+      name:        'Chocolate Chocolate Chip Bundtlet',
+      handle:      'chocolate-chocolate-chip-individual-bundtlet',
+      price:       '$6.50',
+      tags:        ['individual', 'small', 'personal', 'chocolate', 'birthday', 'gift'],
+      blurb:       'Double chocolate indulgence — rich cake loaded with chocolate chips.',
+      isBestseller: true,
+      rating:      4.8,
+      reviewCount: 2234,
+      _img:        'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=320&auto=format&fit=crop',
+    },
+    {
+      name:        'Lemon Bundtlet',
+      handle:      'lemon-individual-bundtlet',
+      price:       '$6.50',
+      tags:        ['individual', 'small', 'personal', 'fruity', 'light', 'lemon', 'gift'],
+      blurb:       'Bright and refreshing lemon cake with velvety cream cheese frosting.',
+      rating:      4.7,
+      reviewCount: 1621,
+      _img:        'https://images.unsplash.com/photo-1587248720327-8eb72564be1e?w=320&auto=format&fit=crop',
+    },
+    {
+      name:        'White Chocolate Raspberry Bundtlet',
+      handle:      'white-chocolate-raspberry-individual-bundtlet',
+      price:       '$6.50',
+      tags:        ['individual', 'small', 'personal', 'fruity', 'premium', 'gift', 'light'],
+      blurb:       'Fluffy white chocolate cake swirled with the finest raspberry purée.',
+      isBestseller: false,
+      rating:      4.8,
+      reviewCount: 1892,
+      _img:        'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=320&auto=format&fit=crop',
+    },
+    {
+      name:        'Confetti Bundtlet',
+      handle:      'confetti-individual-bundtlet',
+      price:       '$6.50',
+      tags:        ['individual', 'small', 'personal', 'birthday', 'fun', 'confetti', 'kids'],
+      blurb:       'Party in every bite — vanilla cake packed with rainbow sprinkles.',
+      rating:      4.8,
+      reviewCount: 1543,
+      _img:        'https://images.unsplash.com/photo-1557925923-cd4648e211a0?w=320&auto=format&fit=crop',
+    },
+    {
+      name:        'Signature Bundtinis® — 12 Count',
+      handle:      'signature-bundtinis-chocolate-lemon-velvet-raspberry',
+      price:       '$25.00',
+      tags:        ['party', 'group', 'medium', 'mid', 'gift', 'celebration', 'sampler'],
+      blurb:       'Our 4 most-loved flavors in bite-sized form — perfect for parties & gifting.',
+      isBestseller: true,
+      rating:      4.9,
+      reviewCount: 3102,
+      _img:        'https://images.unsplash.com/photo-1607478900766-efe13248b125?w=320&auto=format&fit=crop',
+    },
+    {
+      name:        'Red Velvet 8" Bundt Cake',
+      handle:      'red-velvet-8-inch-bundt-cake',
+      price:       '$40.00',
+      tags:        ['birthday', 'celebration', 'party', 'medium', 'mid', 'classic', 'red-velvet'],
+      blurb:       'Serves 8–10. Our iconic red velvet — perfect for birthdays & celebrations.',
+      isBestseller: true,
+      rating:      4.9,
+      reviewCount: 4218,
+      _img:        'https://images.unsplash.com/photo-1535141192574-5d4897c12636?w=320&auto=format&fit=crop',
+    },
+    {
+      name:        'Chocolate Chocolate Chip 8" Cake',
+      handle:      'chocolate-chocolate-chip-8-inch-bundt-cake',
+      price:       '$40.00',
+      tags:        ['birthday', 'celebration', 'party', 'medium', 'mid', 'chocolate'],
+      blurb:       'Serves 8–10. Rich double chocolate — always a crowd favorite.',
+      rating:      4.8,
+      reviewCount: 3541,
+      _img:        'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?w=320&auto=format&fit=crop',
+    },
+    {
+      name:        'Lemon 8" Bundt Cake',
+      handle:      'lemon-8-inch-bundt-cake',
+      price:       '$40.00',
+      tags:        ['birthday', 'celebration', 'party', 'medium', 'mid', 'fruity', 'lemon', 'light'],
+      blurb:       'Serves 8–10. Zingy lemon cake — a refreshing centerpiece for any gathering.',
+      rating:      4.7,
+      reviewCount: 2108,
+      _img:        'https://images.unsplash.com/photo-1587248720327-8eb72564be1e?w=320&auto=format&fit=crop',
+    },
+    {
+      name:        'White Chocolate Raspberry 8" Cake',
+      handle:      'white-chocolate-raspberry-8-inch-bundt-cake',
+      price:       '$40.00',
+      tags:        ['birthday', 'celebration', 'party', 'premium', 'mid', 'fruity', 'gift'],
+      blurb:       'Serves 8–10. A gorgeous showstopper — white chocolate meets raspberry swirl.',
+      rating:      4.8,
+      reviewCount: 2775,
+      _img:        'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=320&auto=format&fit=crop',
+    },
+    {
+      name:        'Red Velvet 10" Bundt Cake',
+      handle:      'red-velvet-10-inch-bundt-cake',
+      price:       '$60.00',
+      tags:        ['large-party', 'premium', 'wedding', 'celebration', 'luxury', 'classic', 'red-velvet'],
+      blurb:       'Serves 12–16. The ultimate red velvet — stunning and delicious for big celebrations.',
+      isBestseller: true,
+      rating:      5.0,
+      reviewCount: 1932,
+      _img:        'https://images.unsplash.com/photo-1535141192574-5d4897c12636?w=320&auto=format&fit=crop',
+    },
+    {
+      name:        'Pecan Praline 10" Bundt Cake',
+      handle:      'pecan-praline-10-inch-bundt-cake',
+      price:       '$60.00',
+      tags:        ['large-party', 'premium', 'celebration', 'unique', 'luxury'],
+      blurb:       'Serves 12–16. Southern-inspired pecan praline — rich, nutty, and unforgettable.',
+      rating:      4.8,
+      reviewCount: 1247,
+      _img:        'https://images.unsplash.com/photo-1551024601-bec78aea704b?w=320&auto=format&fit=crop',
+    },
+    {
+      name:        'Confetti Bundtlet Bundle — 12 Pack',
+      handle:      'confetti-bundtlet-bundle',
+      price:       '$78.00',
+      tags:        ['large-party', 'birthday', 'group', 'fun', 'confetti', 'luxury', 'kids'],
+      blurb:       '12 confetti bundtlets — the ultimate party pack. Perfect for schools & offices.',
+      rating:      4.9,
+      reviewCount: 987,
+      _img:        'https://images.unsplash.com/photo-1557925923-cd4648e211a0?w=320&auto=format&fit=crop',
+    },
+    {
+      name:        'Red Velvet Bundtinis® — 12 Count',
+      handle:      'red-velvet-bundtinis',
+      price:       '$25.00',
+      tags:        ['party', 'group', 'medium', 'mid', 'gift', 'celebration', 'red-velvet', 'classic'],
+      blurb:       'Bite-sized red velvet perfection — 12 mini cakes for sharing.',
+      isBestseller: false,
+      rating:      4.8,
+      reviewCount: 2104,
+      _img:        'https://images.unsplash.com/photo-1607478900766-efe13248b125?w=320&auto=format&fit=crop',
+    },
+  ],
+
+  // ── Product Overrides (metadata on top of hardcoded products) ─────────────
+  productOverrides: {},
+
+  // ── Tag Mapping ───────────────────────────────────────────────────────────
+  tagMap: {},
+
+  // ── Deal Cards ────────────────────────────────────────────────────────────
+  deals: [
+    {
+      id:          'seasonal',
+      emoji:       '🎁',
+      title:       'Gift Packaging Available',
+      description: 'Every cake comes in our signature gift-ready box with a ribbon — perfect for any occasion.',
+      url:         '/cakes/',
+      cta:         'Shop All Cakes →',
+      triggerTags: ['gift', 'birthday', 'celebration'],
+    },
+    {
+      id:          'bundtlet-bundle',
+      emoji:       '🎉',
+      title:       'Bundtlet Bundles — Save More',
+      description: 'Order 12 Bundtlets and save! Perfect for parties, offices, and school events.',
+      url:         '/cakes/bundtlets/',
+      cta:         'See Bundles →',
+      triggerTags: ['party', 'group', 'large-party'],
+    },
+    {
+      id:          'order-ahead',
+      emoji:       '📅',
+      title:       'Order Ahead for Pickup',
+      description: 'Pre-order your cake online for easy same-day or future pickup at your local bakery.',
+      url:         '/find-a-bakery/',
+      cta:         'Find Your Bakery →',
+      triggerTags: ['individual', 'personal', 'small'],
+    },
+    {
+      id:          'tiered',
+      emoji:       '✨',
+      title:       'Tiered Bundt Cakes for Weddings',
+      description: 'Make your special day unforgettable with a custom tiered Bundt Cake celebration.',
+      url:         '/cakes/tiered/',
+      cta:         'Explore Tiered Cakes →',
+      triggerTags: ['wedding', 'luxury', 'premium'],
+    },
+  ],
+
+};
+</script>
+
+
+<!-- ============================================================
+  ENGINE — SHOPFLOW UNIVERSAL BOT (Demo Mode)
+============================================================ -->
+
+<style id="bot-styles"></style>
+
+<div id="lux-fab" title="Chat with Bella 🎂">🎂</div>
+
+<div id="lux-wrap" role="dialog" aria-label="Cake shopping assistant">
+  <div id="lux-head">
+    <div id="lux-avatar"></div>
+    <div>
+      <div id="lux-name"></div>
+      <div id="lux-status"><span id="lux-dot">●</span> <span id="lux-tagline"></span></div>
+    </div>
+    <button id="lux-close" aria-label="Close">✕</button>
+  </div>
+  <div id="lux-progress"><div id="lux-bar"></div></div>
+  <div id="lux-msgs" role="log" aria-live="polite"></div>
+  <div id="lux-chips-wrap"><div id="lux-chips"></div></div>
+  <div id="lux-foot">
+    <input id="lux-input" type="text" autocomplete="off" spellcheck="false">
+    <button id="lux-send" aria-label="Send">▶</button>
+  </div>
+  <div id="lux-powered"></div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+const C   = CLIENT;
+const col = C.colors;
+
+// ── Inject CSS ───────────────────────────────────────────────────────────────
+document.getElementById('bot-styles').textContent = `
+  :root {
+    --primary:  ${col.primary};
+    --primary2: ${col.primaryDark};
+    --bg:       ${col.bg};
+    --mid:      ${col.surface};
+    --border:   ${col.border};
+    --text:     ${col.text};
+    --muted:    ${col.textMuted};
+  }
+
+  #lux-fab {
+    position:fixed; bottom:24px; right:24px; z-index:9998;
+    width:58px; height:58px; border-radius:50%;
+    background:linear-gradient(135deg,var(--primary),var(--primary2));
+    color:#fff; font-size:26px; font-weight:700;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; box-shadow:0 4px 20px rgba(212,100,90,.5);
+    transition:transform .2s, box-shadow .2s; user-select:none;
+    font-family:system-ui,sans-serif;
+    animation: pulse 2.5s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%,100% { box-shadow:0 4px 20px rgba(212,100,90,.5); }
+    50%      { box-shadow:0 4px 32px rgba(212,100,90,.8); }
+  }
+  #lux-fab:hover { transform:scale(1.1); }
+  #lux-fab.open  { opacity:0; pointer-events:none; transition:opacity .15s; animation:none; }
+
+  #lux-wrap {
+    position:fixed; bottom:96px; right:16px; z-index:9999;
+    width:375px; max-width:calc(100vw - 32px);
+    height:min(600px,92dvh);
+    background:var(--bg); border-radius:22px;
+    box-shadow:0 16px 56px rgba(0,0,0,.6);
+    display:flex; flex-direction:column; overflow:hidden;
+    font-family:system-ui,-apple-system,sans-serif;
+    transform:translateY(20px) scale(.96); opacity:0;
+    pointer-events:none; transition:transform .25s ease,opacity .25s ease;
+  }
+  #lux-wrap.open { transform:translateY(0) scale(1); opacity:1; pointer-events:all; }
+
+  /* Header */
+  #lux-head {
+    display:flex; align-items:center; gap:10px;
+    padding:14px 16px;
+    background:linear-gradient(135deg,var(--primary),var(--primary2));
+    flex-shrink:0;
+  }
+  #lux-avatar {
+    width:40px; height:40px; border-radius:50%;
+    background:rgba(255,255,255,.25);
+    display:flex; align-items:center; justify-content:center;
+    font-size:20px; font-weight:700; flex-shrink:0;
+    border:2px solid rgba(255,255,255,.4);
+  }
+  #lux-name   { font-weight:700; font-size:15px; color:#fff; }
+  #lux-status { font-size:11px; color:rgba(255,255,255,.8); display:flex; align-items:center; gap:4px; }
+  #lux-dot    { color:#a8ff78; font-size:10px; }
+  #lux-close  {
+    margin-left:auto; background:rgba(255,255,255,.2); border:none; cursor:pointer;
+    color:#fff; font-size:15px; padding:5px 8px; border-radius:8px;
+    transition:background .2s;
+  }
+  #lux-close:hover { background:rgba(255,255,255,.3); }
+
+  /* Progress bar */
+  #lux-progress { height:3px; background:var(--border); flex-shrink:0; }
+  #lux-bar      { height:100%; width:0%;
+    background:linear-gradient(90deg,var(--primary),var(--primary2));
+    transition:width .4s ease;
+  }
+
+  /* Messages */
+  #lux-msgs {
+    flex:1; overflow-y:auto; padding:16px 14px 8px;
+    display:flex; flex-direction:column; gap:10px;
+    scroll-behavior:smooth;
+  }
+  #lux-msgs::-webkit-scrollbar { width:4px; }
+  #lux-msgs::-webkit-scrollbar-track { background:transparent; }
+  #lux-msgs::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+
+  .bot-row { display:flex; align-items:flex-start; gap:8px; }
+  .bot-av  {
+    width:30px; height:30px; border-radius:50%; flex-shrink:0;
+    background:linear-gradient(135deg,var(--primary),var(--primary2));
+    display:flex; align-items:center; justify-content:center;
+    font-size:14px; font-weight:700; color:#fff;
+  }
+  .bot-bubble {
+    background:var(--mid); color:var(--text); border-radius:16px 16px 16px 4px;
+    padding:10px 14px; font-size:14px; line-height:1.5;
+    max-width:calc(100% - 44px);
+  }
+  .user-bubble {
+    background:linear-gradient(135deg,var(--primary),var(--primary2));
+    color:#fff; border-radius:16px 16px 4px 16px;
+    padding:10px 14px; font-size:14px; line-height:1.5;
+    max-width:80%; margin-left:auto; font-weight:500;
+  }
+  .typing-dot {
+    display:inline-block; width:7px; height:7px; border-radius:50%;
+    background:var(--muted); margin:0 2px; animation:blink 1.2s infinite;
+  }
+  .typing-dot:nth-child(2){animation-delay:.2s}
+  .typing-dot:nth-child(3){animation-delay:.4s}
+  @keyframes blink{0%,80%,100%{opacity:.2}40%{opacity:1}}
+
+  /* Product cards */
+  .prod-carousel {
+    display:flex; gap:10px; overflow-x:auto; padding:4px 2px 8px;
+    scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch;
+  }
+  .prod-carousel::-webkit-scrollbar { height:3px; }
+  .prod-carousel::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+  .prod-card {
+    min-width:165px; max-width:165px; background:var(--bg);
+    border:1px solid var(--border); border-radius:14px; overflow:hidden;
+    scroll-snap-align:start; display:flex; flex-direction:column; flex-shrink:0;
+    transition:border-color .2s; position:relative;
+  }
+  .prod-card:hover { border-color:var(--primary); }
+  .prod-img {
+    width:100%; height:115px; object-fit:cover; background:var(--mid);
+    display:flex; align-items:center; justify-content:center;
+    font-size:32px; color:var(--muted); overflow:hidden;
+  }
+  .prod-img img { width:100%; height:100%; object-fit:cover; display:block; }
+  .prod-info    { padding:9px 10px; flex:1; display:flex; flex-direction:column; gap:4px; }
+  .prod-name    { font-size:12px; font-weight:700; color:var(--text); line-height:1.3; }
+  .prod-blurb   { font-size:11px; color:var(--muted); line-height:1.3; flex:1; }
+  .prod-price   { font-size:13px; font-weight:800; color:var(--primary); }
+  .prod-rating  { font-size:10px; color:var(--muted); }
+  .prod-sizes   { display:flex; flex-wrap:wrap; gap:4px; margin-top:2px; }
+  .size-pill {
+    font-size:10px; padding:2px 7px; border-radius:20px; cursor:pointer;
+    border:1px solid var(--border); color:var(--muted); background:transparent;
+    transition:all .15s;
+  }
+  .size-pill.sel, .size-pill:hover { border-color:var(--primary); color:var(--primary); }
+  .prod-btns  { display:flex; gap:6px; padding:8px 10px 10px; }
+  .btn-view   {
+    flex:1; padding:7px 0; border-radius:8px; font-size:11px; font-weight:600;
+    cursor:pointer; background:transparent; border:1px solid var(--border);
+    color:var(--text); transition:border-color .15s, color .15s; text-decoration:none;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .btn-view:hover { border-color:var(--primary); color:var(--primary); }
+  .btn-cart {
+    flex:1; padding:7px 0; border-radius:8px; font-size:11px; font-weight:700;
+    cursor:pointer; border:none;
+    background:linear-gradient(135deg,var(--primary),var(--primary2));
+    color:#fff; transition:opacity .15s;
+  }
+  .btn-cart:hover { opacity:.88; }
+  .btn-cart.added { background:#2e7d32; color:#fff; }
+
+  /* Bestseller badge */
+  .bestseller-badge {
+    position:absolute; top:7px; left:7px;
+    background:var(--primary); color:#fff;
+    font-size:9px; font-weight:800; padding:2px 8px; border-radius:20px;
+    letter-spacing:.04em; z-index:1; text-transform:uppercase;
+  }
+
+  /* Deal card */
+  .deal-card {
+    background:linear-gradient(135deg,#1f0e0a,#140808);
+    border:1px solid var(--primary2); border-radius:14px;
+    padding:14px 16px; max-width:calc(100% - 44px);
+  }
+  .deal-badge {
+    display:inline-flex; align-items:center; gap:5px;
+    background:rgba(212,100,90,.2); border:1px solid rgba(212,100,90,.4);
+    border-radius:20px; padding:3px 10px;
+    font-size:10px; font-weight:700; color:var(--primary);
+    letter-spacing:.06em; margin-bottom:8px; text-transform:uppercase;
+  }
+  .deal-title { font-size:15px; font-weight:700; color:var(--text); margin-bottom:5px; }
+  .deal-desc  { font-size:13px; color:var(--muted); margin-bottom:10px; line-height:1.4; }
+  .deal-btn   {
+    display:inline-block; padding:8px 16px; border-radius:8px;
+    background:linear-gradient(135deg,var(--primary),var(--primary2));
+    color:#fff; font-size:13px; font-weight:700;
+    text-decoration:none; transition:opacity .15s;
+  }
+  .deal-btn:hover { opacity:.88; }
+
+  /* Chips */
+  #lux-chips-wrap {
+    padding:8px 14px 10px; overflow-x:auto; flex-shrink:0;
+    scrollbar-width:thin; scrollbar-color:var(--primary) var(--mid);
+  }
+  #lux-chips-wrap::-webkit-scrollbar { height:4px; }
+  #lux-chips-wrap::-webkit-scrollbar-track { background:var(--mid); border-radius:2px; }
+  #lux-chips-wrap::-webkit-scrollbar-thumb { background:var(--primary); border-radius:2px; }
+  #lux-chips { display:flex; gap:8px; width:max-content; }
+  .chip {
+    padding:8px 16px; border-radius:20px; font-size:13px; font-weight:500;
+    cursor:pointer; white-space:nowrap; border:1px solid var(--border);
+    color:var(--text); background:transparent; transition:all .15s;
+    min-height:36px; display:flex; align-items:center;
+  }
+  .chip:hover { border-color:var(--primary); color:var(--primary); background:rgba(212,100,90,.1); }
+
+  /* Input */
+  #lux-foot {
+    display:flex; align-items:center; gap:8px;
+    padding:10px 14px; border-top:1px solid var(--border); flex-shrink:0;
+  }
+  #lux-input {
+    flex:1; background:var(--mid); border:1px solid var(--border);
+    border-radius:20px; padding:10px 16px; font-size:16px;
+    color:var(--text); outline:none; transition:border-color .2s;
+    font-family:inherit;
+  }
+  #lux-input::placeholder { color:var(--muted); }
+  #lux-input:focus { border-color:var(--primary); }
+  #lux-send {
+    width:40px; height:40px; border-radius:50%; border:none; cursor:pointer;
+    background:linear-gradient(135deg,var(--primary),var(--primary2));
+    color:#fff; font-size:14px; display:flex; align-items:center;
+    justify-content:center; flex-shrink:0; transition:opacity .15s;
+  }
+  #lux-send:hover { opacity:.88; }
+
+  #lux-powered {
+    text-align:center; font-size:10px; color:var(--muted);
+    padding:4px 0 8px; flex-shrink:0; letter-spacing:.04em;
+  }
+
+  @media(max-width:400px){
+    #lux-wrap { right:0; left:0; bottom:0; border-radius:22px 22px 0 0;
+      height:92dvh; max-width:100vw; width:100vw; }
+    #lux-fab  { bottom:16px; right:16px; }
+  }
+`;
+
+// ── Init DOM ─────────────────────────────────────────────────────────────────
+document.getElementById('lux-name').textContent    = C.botName;
+document.getElementById('lux-tagline').textContent = C.tagline;
+document.getElementById('lux-avatar').textContent  = '🎂';
+document.getElementById('lux-powered').textContent = 'Powered by ' + C.poweredBy;
+document.getElementById('lux-input').placeholder   = 'Ask about cakes, flavors, or sizes…';
+
+// ── State ────────────────────────────────────────────────────────────────────
+const msgs    = document.getElementById('lux-msgs');
+const chips   = document.getElementById('lux-chips');
+const bar     = document.getElementById('lux-bar');
+const fab     = document.getElementById('lux-fab');
+const wrap    = document.getElementById('lux-wrap');
+const input   = document.getElementById('lux-input');
+const sendBtn = document.getElementById('lux-send');
+
+let quizStep     = 0;
+let selectedTags = [];
+let convoHistory = [];
+let allProducts  = [];
+
+// ── Load products (demo mode — use hardcoded C.products) ─────────────────────
+async function loadShopifyProducts() {
+  // In demo mode, NBC isn't Shopify — use hardcoded product list directly
+  allProducts = (C.products || []).map(p => {
+    const override = C.productOverrides?.[p.handle] || {};
+    return {
+      ...p,
+      isBestseller: p.isBestseller || override.isBestseller || false,
+      rating:       p.rating       || override.rating       || null,
+      reviewCount:  p.reviewCount  || override.reviewCount  || null,
+    };
+  });
+  console.log(`[Bot] Loaded ${allProducts.length} products (demo mode)`);
+}
+
+// ── Open / close ─────────────────────────────────────────────────────────────
+let productsLoaded = false;
+fab.addEventListener('click', async () => {
+  wrap.classList.add('open');
+  fab.classList.add('open');
+  if (!msgs.children.length) {
+    if (!productsLoaded) {
+      await loadShopifyProducts();
+      productsLoaded = true;
+    }
+    startQuiz();
+  }
+});
+document.getElementById('lux-close').addEventListener('click', () => {
+  wrap.classList.remove('open');
+  fab.classList.remove('open');
+});
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function scrollBot() { requestAnimationFrame(() => msgs.scrollTop = msgs.scrollHeight); }
+function setProgress(step) { bar.style.width = Math.round((step / C.quiz.length) * 100) + '%'; }
+function clearChips() { chips.innerHTML = ''; }
+function showChips(arr) {
+  chips.innerHTML = '';
+  arr.forEach(({ label, fn }) => {
+    const b = document.createElement('button');
+    b.className = 'chip'; b.textContent = label;
+    b.addEventListener('click', fn);
+    chips.appendChild(b);
+  });
+}
+
+// ── Message builders ─────────────────────────────────────────────────────────
+function botRow(content) {
+  const row = document.createElement('div');
+  row.className = 'bot-row';
+  const av = document.createElement('div');
+  av.className = 'bot-av'; av.textContent = '🎂';
+  row.appendChild(av);
+  if (typeof content === 'string') {
+    const b = document.createElement('div');
+    b.className = 'bot-bubble'; b.textContent = content;
+    row.appendChild(b);
+  } else {
+    row.appendChild(content);
+  }
+  return row;
+}
+function botMsg(text) { msgs.appendChild(botRow(text)); scrollBot(); }
+function userMsg(text) {
+  const d = document.createElement('div');
+  d.className = 'user-bubble'; d.textContent = text;
+  msgs.appendChild(d); scrollBot();
+}
+function typingBubble() {
+  const row = document.createElement('div');
+  row.className = 'bot-row'; row.id = 'typing';
+  const av = document.createElement('div');
+  av.className = 'bot-av'; av.textContent = '🎂';
+  const b = document.createElement('div');
+  b.className = 'bot-bubble';
+  b.innerHTML = '<span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>';
+  row.appendChild(av); row.appendChild(b);
+  msgs.appendChild(row); scrollBot();
+  return row;
+}
+
+// ── Product card ──────────────────────────────────────────────────────────────
+function buildProductCard(product) {
+  const card = document.createElement('div');
+  card.className = 'prod-card';
+
+  // Bestseller badge
+  if (product.isBestseller) {
+    const badge = document.createElement('div');
+    badge.className = 'bestseller-badge';
+    badge.textContent = '⭐ Bestseller';
+    card.appendChild(badge);
+  }
+
+  // Image
+  const imgWrap = document.createElement('div');
+  imgWrap.className = 'prod-img';
+  if (product._img) {
+    const im = document.createElement('img');
+    im.src = product._img;
+    im.alt = product.name;
+    im.loading = 'lazy';
+    im.onerror = () => { imgWrap.textContent = '🎂'; };
+    imgWrap.appendChild(im);
+  } else {
+    imgWrap.textContent = '🎂';
+  }
+  card.appendChild(imgWrap);
+
+  // Info
+  const info = document.createElement('div');
+  info.className = 'prod-info';
+  info.innerHTML = `
+    <div class="prod-name">${product.name}</div>
+    <div class="prod-blurb">${product.blurb || ''}</div>
+    <div class="prod-price">${product.price}</div>
+    ${product.rating ? `<div class="prod-rating">★ ${product.rating} (${(product.reviewCount||0).toLocaleString()} reviews)</div>` : ''}
+  `;
+  card.appendChild(info);
+
+  // Buttons
+  const btns = document.createElement('div');
+  btns.className = 'prod-btns';
+
+  const viewBtn = document.createElement('a');
+  viewBtn.className = 'btn-view';
+  viewBtn.textContent = 'View';
+  viewBtn.href = `${C.shopUrl}/product/${product.handle}/`;
+  viewBtn.target = '_blank';
+  viewBtn.rel = 'noopener';
+
+  const cartBtn = document.createElement('button');
+  cartBtn.className = 'btn-cart';
+  cartBtn.textContent = 'Order Now';
+  cartBtn.addEventListener('click', () => demoAddToCart(cartBtn, product));
+
+  btns.appendChild(viewBtn);
+  btns.appendChild(cartBtn);
+  card.appendChild(btns);
+
+  return card;
+}
+
+// ── Demo "Add to Cart" ────────────────────────────────────────────────────────
+function demoAddToCart(btn, product) {
+  btn.textContent = '…'; btn.disabled = true;
+  setTimeout(() => {
+    btn.classList.add('added');
+    btn.textContent = '✓ Added!';
+    // Show a little follow-up message
+    setTimeout(() => {
+      botMsg(`🎂 Great choice! The ${product.name} is a crowd favorite. Want to see more options or add anything else?`);
+      scrollBot();
+    }, 600);
+  }, 500);
+}
+
+// ── Deal card ─────────────────────────────────────────────────────────────────
+function buildDealCard(deal) {
+  const row = document.createElement('div');
+  row.className = 'bot-row';
+  const av = document.createElement('div');
+  av.className = 'bot-av'; av.textContent = '🎂';
+  const card = document.createElement('div');
+  card.className = 'deal-card';
+  card.innerHTML = `
+    <div class="deal-badge">✦ Just For You</div>
+    <div class="deal-title">${deal.emoji} ${deal.title}</div>
+    <div class="deal-desc">${deal.description}</div>
+    <a class="deal-btn" href="${C.shopUrl}${deal.url}" target="_blank" rel="noopener">${deal.cta}</a>`;
+  row.appendChild(av); row.appendChild(card);
+  return row;
+}
+
+// ── Pick best deal ─────────────────────────────────────────────────────────────
+function pickDeal() {
+  if (!C.deals?.length) return null;
+  return C.deals.reduce((best, deal) => {
+    const score = (deal.triggerTags || []).filter(t => selectedTags.includes(t)).length;
+    return score > best.score ? { deal, score } : best;
+  }, { deal: C.deals[0], score: -1 }).deal;
+}
+
+// ── Score products ─────────────────────────────────────────────────────────────
+function scoreProducts() {
+  return allProducts
+    .map(p => ({ ...p, score: p.tags.filter(t => selectedTags.includes(t)).length }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 3);
+}
+
+// ── Show recommendations ───────────────────────────────────────────────────────
+function showRecommendations() {
+  setProgress(C.quiz.length);
+  clearChips();
+  botMsg('Perfect — baking up your top picks! 🎂');
+
+  const picks = scoreProducts();
+  if (!picks.length) {
+    botMsg("Hmm, let me find a great match — what flavors do you enjoy?");
+    showChips([{ label: '🔁 Start over', fn: () => { clearChips(); selectedTags = []; quizStep = 0; msgs.innerHTML = ''; startQuiz(); }}]);
+    return;
+  }
+
+  // Carousel
+  const carousel = document.createElement('div');
+  carousel.className = 'prod-carousel';
+  picks.forEach(p => carousel.appendChild(buildProductCard(p)));
+
+  const row = document.createElement('div');
+  row.className = 'bot-row';
+  const av = document.createElement('div');
+  av.className = 'bot-av'; av.textContent = '🎂';
+  const inner = document.createElement('div');
+  inner.style.cssText = 'display:flex;flex-direction:column;gap:6px;max-width:calc(100% - 44px)';
+  const label = document.createElement('div');
+  label.className = 'bot-bubble';
+  label.textContent = '🎉 Here are my top picks for you!';
+  inner.appendChild(label);
+  inner.appendChild(carousel);
+  row.appendChild(av); row.appendChild(inner);
+  msgs.appendChild(row);
+  scrollBot();
+
+  // Deal card
+  setTimeout(() => {
+    const deal = pickDeal();
+    if (deal) { msgs.appendChild(buildDealCard(deal)); scrollBot(); }
+  }, 900);
+
+  // Follow-up chips
+  setTimeout(() => {
+    showChips([
+      { label: '🔍 Show more options', fn: () => { userMsg('Show me more cake options'); askAI('Show me more product options based on my preferences.'); }},
+      { label: '🎂 Ask about flavors',  fn: () => { clearChips(); botMsg("I'd love to tell you more about our flavors! What would you like to know?"); }},
+      { label: '🔄 Restart quiz',       fn: () => { clearChips(); selectedTags = []; quizStep = 0; msgs.innerHTML = ''; startQuiz(); }},
+    ]);
+  }, 1300);
+
+  convoHistory.push({
+    role: 'assistant',
+    content: `I recommended: ${picks.map(p => p.name).join(', ')}. Customer preferences: ${selectedTags.join(', ')}.`
+  });
+}
+
+// ── Quiz ──────────────────────────────────────────────────────────────────────
+function startQuiz() {
+  botMsg(C.welcomeMsg);
+  setTimeout(() => askQuestion(0), 400);
+}
+function askQuestion(step) {
+  if (step >= C.quiz.length) { showRecommendations(); return; }
+  quizStep = step;
+  setProgress(step);
+  const q = C.quiz[step];
+  setTimeout(() => {
+    botMsg(q.question);
+    showChips(q.chips.map(chip => ({
+      label: chip.label,
+      fn: () => {
+        userMsg(chip.label);
+        selectedTags.push(...(chip.tags || []));
+        convoHistory.push({ role: 'user', content: chip.label });
+        clearChips();
+        askQuestion(step + 1);
+      }
+    })));
+  }, step === 0 ? 600 : 300);
+}
+
+// ── Build system prompt ────────────────────────────────────────────────────────
+function buildSystemPrompt() {
+  const products = allProducts;
+
+  const productList = products.map(p =>
+    `• ${p.name} — ${p.price}${p.isBestseller ? ' ⭐ BESTSELLER' : ''}${p.rating ? ` — ★${p.rating} (${(p.reviewCount||0).toLocaleString()} reviews)` : ''}\n  ${p.blurb}\n  URL: ${C.shopUrl}/product/${p.handle}/`
+  ).join('\n\n');
+
+  const bestsellers = products.filter(p => p.isBestseller).map(p => `• ${p.name} (${p.price})`).join('\n');
+  const byRating = [...products].filter(p => p.rating).sort((a,b) => b.rating - a.rating);
+  const topRated = byRating.slice(0, 3).map(p => `• ${p.name}: ★${p.rating} (${(p.reviewCount||0).toLocaleString()} reviews)`).join('\n');
+  const priceList = products.map(p => `• ${p.name}: ${p.price}`).join('\n');
+
+  return `${C.aiPersonality}
+
+Store: ${C.shopUrl}
+Bot name: ${C.botName}
+Customer quiz selections: ${selectedTags.length ? selectedTags.join(', ') : 'none yet'}
+
+════ ALL CAKES & PRODUCTS ════
+${productList}
+
+════ BESTSELLERS (use when asked what's most popular) ════
+${bestsellers || 'See all products'}
+
+════ BEST REVIEWED (use when asked about ratings or reviews) ════
+${topRated || 'Review data available on product pages'}
+
+════ PRICING (use when asked how much something costs) ════
+${priceList}
+
+════ DEALS & PROMOTIONS ════
+• Gift-ready packaging included with every order
+• Bundtlet Bundles: 12-count bundles available for parties
+• Tiered cakes available for weddings and large events
+• Order ahead for same-day or future pickup at local bakeries
+
+RESPONSE RULES:
+- Keep replies to 2-3 sentences max, warm and celebratory
+- Always mention serving size when recommending larger cakes
+- Link to product pages when recommending: ${C.shopUrl}/product/[handle]/
+- When asked about flavors, describe the taste warmly (e.g., "moist", "rich", "signature cream cheese frosting")
+- Never make up prices — only use the pricing list above`;
+}
+
+// ── AI Chat ───────────────────────────────────────────────────────────────────
+async function askAI(userText) {
+  const typing = typingBubble();
+  convoHistory.push({ role: 'user', content: userText });
+  try {
+    const res = await fetch(C.proxyUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model:      C.model,
+        max_tokens: C.maxTokens,
+        system:     buildSystemPrompt(),
+        messages:   convoHistory.slice(-10),
+      }),
+    });
+    typing.remove();
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const reply = data.content?.[0]?.text || "I'd love to help — could you tell me more about what you're looking for?";
+    botMsg(reply);
+    convoHistory.push({ role: 'assistant', content: reply });
+  } catch {
+    typing.remove();
+    botMsg("I'm having a moment — let me know what kind of cake you're looking for and I'll help! 🎂");
+  }
+}
+
+// ── Input send ────────────────────────────────────────────────────────────────
+function handleSend() {
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  userMsg(text);
+  clearChips();
+  askAI(text);
+}
+sendBtn.addEventListener('click', handleSend);
+input.addEventListener('keydown', e => { if (e.key === 'Enter') handleSend(); });
+
+// ── Mobile viewport fix ───────────────────────────────────────────────────────
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', () => {
+    wrap.style.height = Math.min(600, window.visualViewport.height * 0.92) + 'px';
+  });
+}
+
+})();
+</script>
+
+</body>
+</html>
